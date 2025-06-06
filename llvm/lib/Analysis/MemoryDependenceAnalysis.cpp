@@ -51,6 +51,7 @@
 #include <cassert>
 #include <iterator>
 #include <utility>
+#include <cmath>
 
 using namespace llvm;
 
@@ -82,6 +83,9 @@ static cl::opt<unsigned>
 
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;
+
+// for quickly calculating log
+const float ln2 = 0.69314718f;
 
 /// This is a helper function that removes Val from 'Inst's set in ReverseMap.
 ///
@@ -991,33 +995,20 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
 static void
 SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
-  switch (Cache.size() - NumSortedEntries) {
-  case 0:
-    // done, no new entries.
-    break;
-  case 2: {
-    // Two new entries, insert the last one into place.
-    NonLocalDepEntry Val = Cache.back();
-    Cache.pop_back();
-    MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-        std::upper_bound(Cache.begin(), Cache.end() - 1, Val);
-    Cache.insert(Entry, Val);
-    [[fallthrough]];
-  }
-  case 1:
-    // One new entry, Just insert the new value at the appropriate position.
-    if (Cache.size() != 1) {
+
+  auto s = Cache.size() - NumSortedEntries;
+  if (s < log2(Cache.size()) * ln2) {
+    while (s>0) {
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
       MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-          llvm::upper_bound(Cache, Val);
+        std::upper_bound(Cache.begin(), Cache.end() - 1, Val);
       Cache.insert(Entry, Val);
+      s--;
     }
-    break;
-  default:
-    // Added many values, do a full scale sort.
+  }
+  else {
     llvm::sort(Cache);
-    break;
   }
 }
 
