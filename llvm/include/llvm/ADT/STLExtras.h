@@ -25,6 +25,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/ADT/pdqsort.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1631,7 +1632,7 @@ inline void array_pod_sort(IteratorTy Start, IteratorTy End) {
   // behavior with an empty sequence.
   auto NElts = End - Start;
   if (NElts <= 1) return;
-#ifdef EXPENSIVE_CHECKS
+#ifdef EXPENSIVE_CHECKS–
   detail::presortShuffle<IteratorTy>(Start, End);
 #endif
   qsort(&*Start, NElts, sizeof(*Start), get_array_pod_sort_comparator(*Start));
@@ -1667,16 +1668,7 @@ using sort_trivially_copyable = std::conjunction<
 // to help uncover non-deterministic behavior (PR35135).
 template <typename IteratorTy>
 inline void sort(IteratorTy Start, IteratorTy End) {
-  if constexpr (detail::sort_trivially_copyable<IteratorTy>::value) {
-    // Forward trivially copyable types to array_pod_sort. This avoids a large
-    // amount of code bloat for a minor performance hit.
-    array_pod_sort(Start, End);
-  } else {
-#ifdef EXPENSIVE_CHECKS
-    detail::presortShuffle<IteratorTy>(Start, End);
-#endif
-    std::sort(Start, End);
-  }
+  pdqsort(Start, End);
 }
 
 template <typename Container> inline void sort(Container &&C) {
@@ -1685,10 +1677,7 @@ template <typename Container> inline void sort(Container &&C) {
 
 template <typename IteratorTy, typename Compare>
 inline void sort(IteratorTy Start, IteratorTy End, Compare Comp) {
-#ifdef EXPENSIVE_CHECKS
-  detail::presortShuffle<IteratorTy>(Start, End);
-#endif
-  std::sort(Start, End, Comp);
+  pdqsort(Start, End, Comp);
 }
 
 template <typename Container, typename Compare>
