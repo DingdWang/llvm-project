@@ -986,7 +986,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
   if (Cache.size() == 1)
     return;
   auto s = Cache.size() - NumSortedEntries;
-  if (s < Log2_32(Cache.size()) * llvm::numbers::ln2) {
+  if (s < Log2_32(Cache.size())) {
     while (s > 0) {
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
