@@ -983,10 +983,17 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
 static void
 SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
-  if (Cache.size() == 1)
+  LLVM_DEBUG(dbgs() << "NumSortedEntries: " << NumSortedEntries << ", Cache.size: " << Cache.size() << "\n");
+  if (Cache.size() < 2)
     return;
-  auto s = Cache.size() - NumSortedEntries;
-  if (s < NumSortedEntries) {
+  unsigned s = Cache.size() - NumSortedEntries;
+  if (s == 0)
+    return;
+  if (NumSortedEntries == 0){
+    llvm::sort(Cache);
+    return;
+  }
+  if (s < Log2_32(Cache.size())) {
     while (s > 0) {
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
